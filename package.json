@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/firestore": "^0.10.0",
     "@google-cloud/video-intelligence": "^1.0.0",
     "cheerio-req": "^1.2.0",
     "express": "^4.16.2"
