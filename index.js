@@ -26,7 +26,8 @@
   * TODO(developer): Uncomment the following line before running the sample.
   */
  // const gcsUri = 'GCS URI of the video to analyze, e.g. gs://my-bucket/my-video.mp4';
- const gcsUri = 'gs://spicescale/gunturt.mp4';
+ const gcsUri = 'gs://spicescale/myvideo.mp4';
+ //const gcsUri = './myvideo.mp4';
 
  const request = {
     inputUri: gcsUri,
