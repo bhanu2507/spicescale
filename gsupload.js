@@ -3,7 +3,7 @@ const Storage = require('@google-cloud/storage');
 
 const bucketName = 'spicescale';
 
-const filename = './myvideo.mp4';
+const filename = './Malli_Raava_theatrical_trailer_-_idlebrain.com-ByOnLtxjFHs.mp4';
 
 const storage = new Storage();
 

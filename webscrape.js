@@ -5,6 +5,10 @@ const cheerioReq = require('cheerio-req');
 const Firestore = require('@google-cloud/firestore');
 var fs = require('fs');
 var youtubedl = require('youtube-dl');
+const Storage = require('@google-cloud/storage');
+
+
+const bucketName = 'spicescale';
 
 const firestore = new Firestore({
     projectId: 'spicescale-291ce',
@@ -27,21 +31,23 @@ cheerioReq('http://www.idlebrain.com//index2.html', (err, $) => {
         if (trailnm.lastIndexOf('<') == -1) {
             deldocs(function(res){
                 getytlink(trailurl, function(ytlink){
-                    console.log(trailnm.search("trailer"));
-                    if ((ytlink != undefined) & (trailnm.search("trailer") != -1) ) {
+                    if (ytlink != undefined ) {
                         ydtl(trailnm,ytlink, function(res){
-                            console.log(trailnm, ytlink);
-                            const document = firestore.doc('trailers/'+trailnm);
-                            if (ytlink != undefined) {
-                            // Enter new data into the document.
-                            document.set({
-                                title: trailnm,
-                                url: ytlink,
-                            }).then(() => {
-                                // Document created successfully.
-                            }).catch((error) => {
-                                console.log(error);
-                            });
+                            if (res.search("trailer") != -1) {
+                                    //console.log(trailnm, ytlink);
+                                    const document = firestore.doc('trailers/'+trailnm);
+                                    //if (ytlink != undefined) {
+                                    // Enter new data into the document.
+                                    document.set({
+                                        title: trailnm,
+                                        url: ytlink,
+                                        filename: res,
+                                    }).then(() => {
+                                        // Document created successfully.
+                                    }).catch((error) => {
+                                        console.log(error);
+                                    });
+                                // }
                             }
                         })
                     }
@@ -78,7 +84,8 @@ async function deldocs (callback) {
 }
 
 async function ydtl (nm, yln, callback) {
-        console.log(yln);
+        //console.log(yln);
+        let vtrail = 0;
         //let video = youtubedl('http://www.youtube.com/watch?v=X6vSXWi0HOA',
         let video = youtubedl(yln,
         // Optional arguments passed to youtube-dl.
@@ -88,10 +95,15 @@ async function ydtl (nm, yln, callback) {
     
         // Will be called when the download starts.
     await video.on('info', function(info) {
-            /* console.log('Download started');
+            /* console.log('Download started');*/
             console.log('filename: ' + info._filename);
-            console.log('size: ' + info.size); */
-            video.pipe(fs.createWriteStream(info._filename + '.mp4'));
+            /*console.log('size: ' + info.size); */
+            //vtrail = info._filename.search("trailer");
+            //console.log(vtrail);
+            if (info._filename.search("trailer") != -1) {
+                video.pipe(fs.createWriteStream(info._filename + '.mp4'));
+            }
+            callback(info._filename);
         });
-        callback('true');
+
 }
