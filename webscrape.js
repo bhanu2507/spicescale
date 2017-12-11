@@ -41,7 +41,7 @@ cheerioReq('http://www.idlebrain.com//index2.html', (err, $) => {
                                     document.set({
                                         title: trailnm,
                                         url: ytlink,
-                                        filename: res,
+                                        filename: trailnm + '.mp4',
                                     }).then(() => {
                                         // Document created successfully.
                                     }).catch((error) => {
@@ -101,7 +101,7 @@ async function ydtl (nm, yln, callback) {
             //vtrail = info._filename.search("trailer");
             //console.log(vtrail);
             if (info._filename.search("trailer") != -1) {
-                video.pipe(fs.createWriteStream(info._filename + '.mp4'));
+                video.pipe(fs.createWriteStream('./trailers/' + nm + '.mp4'));
             }
             callback(info._filename);
         });
