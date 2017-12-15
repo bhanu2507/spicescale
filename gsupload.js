@@ -10,7 +10,7 @@ const firestore = new Firestore({
 const fs = require('fs');
 const bucketName = 'spicescale';
 
-fs.readdir('./trailers', (err, files) => {
+/* fs.readdir('./trailers', (err, files) => {
   files.forEach(file => {
     console.log(file);
     const storage = new Storage();
@@ -26,8 +26,20 @@ fs.readdir('./trailers', (err, files) => {
     });
     
   })
-})
+}) */
 
+const storage = new Storage();
+const gcsUri = '12-15-2017-17-54-50.mp4';
+storage
+  .bucket(bucketName)
+  .file(gcsUri)
+  .delete()
+  .then(() => {
+  console.log(`gs://${bucketName}/${gcsUri} deleted.`);
+  }) 
+  .catch(err => {
+  console.error('ERROR:', err);
+  });
 
 
 //const filename = './Malli_Raava_theatrical_trailer_-_idlebrain.com-ByOnLtxjFHs.mp4';

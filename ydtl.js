@@ -1,6 +1,6 @@
 var fs = require('fs');
 var youtubedl = require('youtube-dl');
-var video = youtubedl('https://www.youtube.com/embed/FHZJa4dPMFg',
+var video = youtubedl('https://www.youtube.com/watch?v=Ea8jiLRWHNc',
   // Optional arguments passed to youtube-dl.
   ['--format=18'],
   // Additional options can be given for calling `child_process.execFile()`.
@@ -8,8 +8,8 @@ var video = youtubedl('https://www.youtube.com/embed/FHZJa4dPMFg',
  
 // Will be called when the download starts.
 let fln = '';
-let url1 = 'https://www.youtube.com/embed/IKsLn5ZLZLY';
-let url2 = 'https://www.youtube.com/embed/yUxhHlivzyM';
+/* let url1 = 'https://www.youtube.com/embed/IKsLn5ZLZLY';
+let url2 = 'https://www.youtube.com/embed/yUxhHlivzyM'; */
 video.on('info', function(info) {
   fln = info._filename;
   console.log('Download started');
