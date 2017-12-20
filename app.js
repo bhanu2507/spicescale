@@ -3,8 +3,8 @@ const express = require('express');
 const app = express();
 const Storage = require('@google-cloud/storage');
 const Firestore = require('@google-cloud/firestore');
-var fs = require('fs');
-var youtubedl = require('youtube-dl');
+const fs = require('fs');
+const youtubedl = require('youtube-dl');
 const video = require('@google-cloud/video-intelligence').v1;
 const client = new video.VideoIntelligenceServiceClient();
 const bucketName = 'spicescale';
@@ -12,16 +12,28 @@ const firestore = new Firestore({
     projectId: 'spicescale-291ce',
     keyFilename: './spicescale-0309023d13b5.json',
   });
-
+const Queue = require('bee-queue');
+const queue = new Queue('ssqueue', {
+    redis: {
+      host: '104.199.149.72'
+    },
+    isWorker: true
+  });
+const cron = require('node-cron');
 let vtitle = '';  
 let yln = '';
-app.get('/ssvideo', (req, res) => {
+app.get('/ssvideo', (req1, res1) => {
     //const yln = 'https://www.youtube.com/watch?v=Dctq41jvM1I';
     //console.log(req.query.ssvideo);
-    yln = req.query.ssvideo;
+    yln = req1.query.ssvideo;
     ydtl(yln, function(res) {
         gsupload(res, function(res) {
-            const gcsUri = 'gs://spicescale/' + res;
+            const job = queue.createJob({x: res}).save();
+/*             job.on('succeeded', (result) => {
+            console.log(`Received result for job ${job.id}: result`);
+            }) */
+            console.log('job inserted' + job.x);
+ /*            const gcsUri = 'gs://spicescale/' + res;
             //const gcsUri = './myvideo.mp4';
             const document = firestore.doc('trailers/'+res.slice(0,-4));
             const request = {
@@ -104,15 +116,6 @@ app.get('/ssvideo', (req, res) => {
                                 break;
                     }
 
-                    /* console.log(
-                    `\tTime: ${result.timeOffset.seconds}` +
-                        `.${(result.timeOffset.nanos / 1e6).toFixed(0)}s`
-                    );
-                    console.log(
-                    `\t\tPornography liklihood: ${
-                        likelihoods[result.pornographyLikelihood]
-                    }`
-                    ); */
                     document.update({
                         'UNKNOWN':unknown_s,
                         'VERY_UNLIKELY':very_unlikely_s,
@@ -137,10 +140,11 @@ app.get('/ssvideo', (req, res) => {
                     .catch(err => {
                     console.error('ERROR:', err);
                     });
+                res1.send(rating);    
                 })
                 .catch(err => {
                 console.error('ERROR:', err);
-                });
+                }); */
    
         })
     })
@@ -206,5 +210,16 @@ await video.on('info', function(info) {
     });
 
 }
+
+queue.process(function (job, done) {
+    console.log(`Processing job ${job.id}`);
+    return done(null, job.data.x);
+  });
+
+cron.schedule('* * * * *', function(){
+    console.log('running a task 1 minute');
+
+  });
+
 
 app.listen(3100, () => console.log('Example app listening on port 3100!'))
