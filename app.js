@@ -15,7 +15,7 @@ const firestore = new Firestore({
 const Queue = require('bee-queue');
 const queue = new Queue('ssqueue', {
     redis: {
-      host: '104.199.149.72'
+      host: '35.194.170.234'
     },
     isWorker: true
   });
@@ -27,12 +27,12 @@ app.get('/ssvideo', (req1, res1) => {
     //console.log(req.query.ssvideo);
     yln = req1.query.ssvideo;
     ydtl(yln, function(res) {
-        gsupload(res, function(res) {
+       // gsupload(res, function(res) {
             const job = queue.createJob({x: res}).save();
 /*             job.on('succeeded', (result) => {
             console.log(`Received result for job ${job.id}: result`);
             }) */
-            console.log('job inserted' + job.x);
+            console.log('job inserted');
  /*            const gcsUri = 'gs://spicescale/' + res;
             //const gcsUri = './myvideo.mp4';
             const document = firestore.doc('trailers/'+res.slice(0,-4));
@@ -146,7 +146,8 @@ app.get('/ssvideo', (req1, res1) => {
                 console.error('ERROR:', err);
                 }); */
    
-        })
+    //    })
+    res1.send(res);
     })
 })    
 
@@ -161,7 +162,7 @@ async function gsupload(file, callback) {
           .upload('./trailers/'+file)
           .then(() => {
             //console.log(`${file} uploaded to ${bucketName}.`);
-            fs.unlinkSync('./trailers/' + file);
+            //fs.unlinkSync('./trailers/' + file);
             callback(file);
           })
           .catch(err => {
@@ -212,14 +213,143 @@ await video.on('info', function(info) {
 }
 
 queue.process(function (job, done) {
-    console.log(`Processing job ${job.id}`);
+    console.log(`Processing job ${job.data.x}`);
+    const storage = new Storage();
+        storage
+          .bucket(bucketName)
+          .upload('./trailers/'+job.data.x)
+          .then(() => {
+            //console.log(`${file} uploaded to ${bucketName}.`);
+            fs.unlinkSync('./trailers/' + job.data.x);
+            //callback(job.data.x);
+            const gcsUri = 'gs://spicescale/' + job.data.x;
+            //const gcsUri = './myvideo.mp4';
+            const document = firestore.doc('trailers/'+job.data.x.slice(0,-4));
+            const request = {
+                inputUri: gcsUri,
+                features: ['EXPLICIT_CONTENT_DETECTION'],
+            };
+            
+            // Human-readable ss
+            const likelihoods = [
+                'UNKNOWN',
+                'VERY_UNLIKELY',
+                'UNLIKELY',
+                'POSSIBLE',
+                'LIKELY',
+                'VERY_LIKELY',
+            ];
+            let unknown=0; 
+            let very_unlikely=0;
+            let unlikely=0;
+            let possible=0;
+            let likely=0;
+            let very_likely=0;
+
+            let unknown_s=[]; 
+            let very_unlikely_s=[];
+            let unlikely_s=[];
+            let possible_s=[];
+            let likely_s=[];
+            let very_likely_s=[];
+
+            let rating = [];
+            // Detects unsafe content
+            client
+                .annotateVideo(request)
+                .then(results => {
+                const operation = results[0];
+               console.log('Waiting for operation to complete...');
+                return operation.promise();
+                })
+                .then(results => {
+                // Gets unsafe content
+                const explicitContentResults =
+                    results[0].annotationResults[0].explicitAnnotation;
+                console.log('Explicit annotation results:');
+                explicitContentResults.frames.forEach(result => {
+                    if (result.timeOffset === undefined) {
+                    result.timeOffset = {};
+                    }
+                    if (result.timeOffset.seconds === undefined) {
+                    result.timeOffset.seconds = 0;
+                    }
+                    if (result.timeOffset.nanos === undefined) {
+                    result.timeOffset.nanos = 0;
+                    }
+                    let stime = result.timeOffset.seconds + '.' + (result.timeOffset.nanos / 1e6).toFixed(0)
+                    switch (likelihoods[result.pornographyLikelihood]) {
+                        case 'UNKNOWN':
+                                unknown_s.push({unknown:stime});
+                                unknown++;
+                                break;
+                        case 'VERY_UNLIKELY':
+                                very_unlikely_s.push({very_unlikely:stime});
+                                very_unlikely++;
+                                break;
+                        case 'UNLIKELY':
+                                unlikely_s.push({unlikely:stime});
+                                unlikely++;
+                                break;
+                        case 'POSSIBLE':
+                                possible_s.push({possible:stime});
+                                possible++;
+                                break;
+                        case 'LIKELY':
+                                likely_s.push({likely:stime});
+                                likely++;
+                                break;
+                        case 'VERY_LIKELY':
+                                very_likely_s.push({very_likely:stime});
+                                very_likely++;
+                                break;
+                    }
+
+                    document.update({
+                        'UNKNOWN':unknown_s,
+                        'VERY_UNLIKELY':very_unlikely_s,
+                        'UNLIKELY':unlikely_s,
+                        'POSSIBLE':possible_s,
+                        'LIKELY':likely_s,
+                        'VERY_LIKELY':very_likely_s,
+                      }).then(() => {
+                        // Document updated successfully.
+                      });
+                });
+                rating.push({'UNKNOWN':unknown},{'VERY_UNLIKELY':very_unlikely},{'UNLIKELY':unlikely},{'POSSIBLE':possible},{'LIKELY':likely},{'VERY_LIKELY':very_likely});
+                //console.log(rating);
+                const storage = new Storage();
+                    storage
+                    .bucket(bucketName)
+                    .file(job.data.x)
+                    .delete()
+                    .then(() => {
+                    //console.log(`gs://${bucketName}/${res} deleted.`);
+                    }) 
+                    .catch(err => {
+                    console.error('ERROR:', err);
+                    });
+                //res1.send(rating);    
+                })
+                .catch(err => {
+                console.error('ERROR:', err);
+                });
+          })
+          .catch(err => {
+            console.error('ERROR:', err);
+          });
+
     return done(null, job.data.x);
   });
 
-cron.schedule('* * * * *', function(){
+/* cron.schedule('* * * * *', function(){
     console.log('running a task 1 minute');
+    queue.process(function (job, done) {
+        console.log(`Processing job ${job.id}`);
+        return done(null, job.data.x + job.data.y);
+      });
 
-  });
+  }); */
 
 
 app.listen(3100, () => console.log('Example app listening on port 3100!'))
